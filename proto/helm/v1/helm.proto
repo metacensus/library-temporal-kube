@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package helm.v1;
+
+import "kube/v1/kube.proto";
+import "temporal/v1/temporal.proto";
+
+option go_package = "github.com/metacensus/library-temporal-kube/gen/helm/v1;helmv1";
+
+// Helm renders charts from the filesystem the hosting worker was built with.
+// Rendering touches no cluster, so the worker that holds the chart need not
+// hold credentials. Errors are Helm.ChartNotFound and Helm.Invalid, neither
+// retried: the same inputs render the same way.
+service Helm {
+  // RenderChart renders one chart with the caller's values merged over the
+  // chart's own values.yaml, validated against its values.schema.json when it
+  // has one, and returns the resources in Helm's install order, each keyed
+  // "<lowercase kind>-<name>". Hooks are left out. A rendered document that
+  // does not parse fails the activity.
+  rpc RenderChart(RenderChartInput) returns (RenderChartOutput) {
+    option (temporal.v1.activity) = {
+      name: "helm.v1.RenderChart"
+      start_to_close_timeout: {seconds: 120}
+    };
+  }
+}
+
+message RenderChartInput {
+  // Directory of the chart in the worker's chart filesystem.
+  string chart = 1;
+  // Helm release name; charts derive resource names from it.
+  string release_name = 2;
+  // .Release.Namespace for the templates. Rendered manifests are not stamped
+  // with it; kube's namespace field does that at write time.
+  string namespace = 3;
+  // Overrides on the chart's defaults, as a values file.
+  string values_yaml = 4;
+  // Include the chart's crds/ directory in the output.
+  bool include_crds = 5;
+  // A rendered kind: Secret fails with Helm.Invalid unless set: the output is
+  // recorded in workflow history.
+  bool allow_secrets = 6;
+  // Capabilities the templates may test; defaults are Helm's.
+  string kube_version = 7;
+  repeated string api_versions = 8;
+}
+
+message RenderChartOutput {
+  repeated kube.v1.Resource resources = 1;
+}
