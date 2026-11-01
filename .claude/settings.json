@@ -1,0 +1,22 @@
+{
+  "enabledPlugins": {
+    "metacensus@metacensus": true,
+    "temporal-architect@temporal-architect": true
+  },
+  "extraKnownMarketplaces": {
+    "metacensus": {
+      "source": {
+        "source": "github",
+        "repo": "metacensus/skills"
+      },
+      "autoUpdate": true
+    },
+    "temporal-architect": {
+      "source": {
+        "source": "github",
+        "repo": "jmbarzee/temporal-architect-dist"
+      },
+      "autoUpdate": true
+    }
+  }
+}

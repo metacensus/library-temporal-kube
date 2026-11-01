@@ -1,0 +1,29 @@
+# Mocks for the generated activity interfaces and the client under them;
+# consumers' workflow tests mock the former, this module's activity tests the
+# latter. Regenerate with `make mocks`.
+with-expecter: true
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "{{.PackageName}}"
+filename: "{{.InterfaceName | snakecase}}.go"
+dir: "mocks/{{.InterfaceDirRelative}}"
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+
+packages:
+  github.com/metacensus/library-temporal-kube/gen/kube/v1:
+    config:
+      dir: "mocks/kube/v1"
+    interfaces:
+      KubernetesActivities:
+  github.com/metacensus/library-temporal-kube/gen/helm/v1:
+    config:
+      dir: "mocks/helm/v1"
+    interfaces:
+      HelmActivities:
+  github.com/metacensus/library-temporal-kube/kube:
+    config:
+      dir: "mocks/kube/v1"
+      outpkg: "kubev1"
+    interfaces:
+      Client:

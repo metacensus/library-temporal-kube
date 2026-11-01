@@ -1,0 +1,17 @@
+version: v2
+managed:
+  enabled: true
+plugins:
+  - local: protoc-gen-go
+    out: gen
+    opt:
+      - paths=source_relative
+  # Temporal activity stubs.
+  - local: protoc-gen-go_temporal
+    out: gen
+    opt:
+      - docs-out=./proto/README.md
+      - paths=source_relative
+    strategy: all
+inputs:
+  - directory: proto

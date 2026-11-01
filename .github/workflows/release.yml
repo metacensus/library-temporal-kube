@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  push:
+    tags:
+      # Must match scripts/version.sh's VERSION_REGEX.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+# A Go module publishes by tag alone; the release re-runs the gate at the
+# tagged commit so a consumer never pins a version that did not pass it.
+jobs:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/build.yml
