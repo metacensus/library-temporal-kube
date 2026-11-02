@@ -10,7 +10,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 
 	pb "github.com/metacensus/library-temporal-kube/gen/helm/v1"
-	"github.com/metacensus/library-temporal-kube/helm"
+	helm "github.com/metacensus/library-temporal-kube/lib/helm/v1"
 )
 
 // charts is one chart, "basic", with defaults, a schema, a conditional

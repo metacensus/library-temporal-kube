@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	pb "github.com/metacensus/library-temporal-kube/gen/kube/v1"
-	"github.com/metacensus/library-temporal-kube/kube"
+	kube "github.com/metacensus/library-temporal-kube/lib/kube/v1"
 	kubemocks "github.com/metacensus/library-temporal-kube/mocks/kube/v1"
 )
 

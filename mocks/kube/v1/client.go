@@ -5,7 +5,7 @@ package kubev1
 import (
 	context "context"
 
-	kube "github.com/metacensus/library-temporal-kube/kube"
+	kube "github.com/metacensus/library-temporal-kube/lib/kube/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mock "github.com/stretchr/testify/mock"

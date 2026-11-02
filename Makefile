@@ -82,7 +82,7 @@ check: lint
 	@git diff --exit-code -- gen proto || (echo 'proto gen dirty; run make proto' && exit 1)
 	@GOWORK=off GOTOOLCHAIN=$(GEN_TOOLCHAIN) $(TOOL_PATH) mockery
 	@git diff --exit-code -- mocks || (echo 'mocks dirty; run make mocks' && exit 1)
-	@twf check twf/*/*.twf
+	@twf check twf/*/*/*.twf
 	@$(MAKE) tidy-check
 	@GOTOOLCHAIN=$(GEN_TOOLCHAIN) go test -race -count=1 ./...
 

@@ -21,7 +21,7 @@ packages:
       dir: "mocks/helm/v1"
     interfaces:
       HelmActivities:
-  github.com/metacensus/library-temporal-kube/kube:
+  github.com/metacensus/library-temporal-kube/lib/kube/v1:
     config:
       dir: "mocks/kube/v1"
       outpkg: "kubev1"
