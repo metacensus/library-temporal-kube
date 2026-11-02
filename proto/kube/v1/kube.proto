@@ -1,0 +1,218 @@
+syntax = "proto3";
+
+package kube.v1;
+
+import "google/protobuf/duration.proto";
+import "temporal/v1/temporal.proto";
+
+option go_package = "github.com/metacensus/library-temporal-kube/gen/kube/v1;kubev1";
+
+// Kubernetes writes pre-rendered manifests with the credentials of the worker
+// that hosts it. The caller keys every resource by an id of its choosing;
+// outputs carry the same ids, and an error names the id it stopped at.
+//
+// Error types: Kube.Invalid, Kube.Forbidden, Kube.Conflict and
+// Kube.AlreadyExists are non-retryable; Kube.NotReady and Kube.Exists are
+// retryable and are how Ready and Gone wait; Kube.Failed is non-retryable
+// and means a resource reached a terminal failure.
+service Kubernetes {
+  // Create posts each resource in order and fails on one that already exists,
+  // unless it carries this activity's own idempotency annotation, in which
+  // case a retry counts it as created.
+  rpc Create(CreateInput) returns (CreateOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Create"
+      start_to_close_timeout: {seconds: 120}
+    };
+  }
+
+  // Apply is server-side apply under the worker's field manager, in order.
+  // A field another manager owns fails with Kube.Conflict unless force is set.
+  rpc Apply(ApplyInput) returns (ApplyOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Apply"
+      start_to_close_timeout: {seconds: 120}
+    };
+  }
+
+  // Delete removes each resource. Absent is success. An identifier that
+  // carries a uid deletes only that object; a different object under the
+  // same name is left alone and counts as gone.
+  rpc Delete(DeleteInput) returns (DeleteOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Delete"
+      start_to_close_timeout: {seconds: 120}
+    };
+  }
+
+  // Status reports each resource's kstatus condition and never fails because
+  // a resource is not ready.
+  rpc Status(StatusInput) returns (StatusOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Status"
+      start_to_close_timeout: {seconds: 60}
+    };
+  }
+
+  // Ready fails with Kube.NotReady while any resource is not Current, so the
+  // caller's retry policy is the wait and its schedule-to-close timeout the
+  // cap. A resource in Failed fails with Kube.Failed, which is not retried.
+  rpc Ready(ReadyInput) returns (ReadyOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Ready"
+      start_to_close_timeout: {seconds: 60}
+      retry_policy: {
+        initial_interval: {seconds: 5}
+        backoff_coefficient: 1.0
+      }
+    };
+  }
+
+  // Gone fails with Kube.Exists while any resource still exists, with the
+  // same wait contract as Ready.
+  rpc Gone(GoneInput) returns (GoneOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.Gone"
+      start_to_close_timeout: {seconds: 60}
+      retry_policy: {
+        initial_interval: {seconds: 5}
+        backoff_coefficient: 1.0
+      }
+    };
+  }
+
+  // ExecPod runs a command in a container and returns what it wrote. A
+  // non-zero exit is a result, not an error; the activity fails only when
+  // the exec itself cannot run. It runs once, because a command is not
+  // idempotent; callers opt into retries.
+  rpc ExecPod(ExecPodInput) returns (ExecPodOutput) {
+    option (temporal.v1.activity) = {
+      name: "kube.v1.ExecPod"
+      start_to_close_timeout: {seconds: 300}
+      heartbeat_timeout: {seconds: 30}
+      retry_policy: {max_attempts: 1}
+    };
+  }
+}
+
+// Resource is one manifest under the caller's id.
+message Resource {
+  string id = 1;
+  bytes manifest_yaml = 2;
+}
+
+// ResourceIdentifier names one object in the cluster under the caller's id.
+// Writes return it with uid and generation set; callers that already know
+// the object may build it with only api_version, kind, name and namespace.
+message ResourceIdentifier {
+  string id = 1;
+  string api_version = 2;
+  string kind = 3;
+  string name = 4;
+  // Empty for a cluster-scoped resource.
+  string namespace = 5;
+  string uid = 6;
+  int64 generation = 7;
+}
+
+message CreateInput {
+  repeated Resource resources = 1;
+  // Stamped on a namespaced resource whose manifest names none. A namespaced
+  // resource with neither fails with Kube.Invalid.
+  string namespace = 2;
+  // A kind: Secret fails with Kube.Invalid unless set: a manifest is recorded
+  // in workflow history.
+  bool allow_secrets = 3;
+}
+
+message CreateOutput {
+  repeated ResourceIdentifier resources = 1;
+}
+
+message ApplyInput {
+  repeated Resource resources = 1;
+  string namespace = 2;
+  bool allow_secrets = 3;
+  // Take ownership of fields another manager owns instead of failing.
+  bool force = 4;
+}
+
+message ApplyOutput {
+  repeated ResourceIdentifier resources = 1;
+}
+
+// Propagation is the Kubernetes deletion propagation policy.
+enum Propagation {
+  // Background: the object goes first, its dependents after.
+  PROPAGATION_UNSPECIFIED = 0;
+  PROPAGATION_BACKGROUND = 1;
+  PROPAGATION_FOREGROUND = 2;
+  PROPAGATION_ORPHAN = 3;
+}
+
+message DeleteInput {
+  repeated ResourceIdentifier resources = 1;
+  Propagation propagation = 2;
+}
+
+message DeleteOutput {}
+
+message StatusInput {
+  repeated ResourceIdentifier resources = 1;
+}
+
+message StatusOutput {
+  repeated ResourceStatus resources = 1;
+}
+
+// Condition is kstatus's reading of an object: Current means reconciled to
+// the generation that was written, InProgress means still reconciling,
+// Failed means it will not reconcile without a change. A Pod that exited
+// with failure is Failed here, where kstatus would call it Current.
+enum Condition {
+  CONDITION_UNSPECIFIED = 0;
+  CONDITION_CURRENT = 1;
+  CONDITION_IN_PROGRESS = 2;
+  CONDITION_FAILED = 3;
+  CONDITION_TERMINATING = 4;
+  CONDITION_NOT_FOUND = 5;
+}
+
+message ResourceStatus {
+  string id = 1;
+  Condition condition = 2;
+  string message = 3;
+  int64 generation = 4;
+}
+
+message ReadyInput {
+  repeated ResourceIdentifier resources = 1;
+}
+
+message ReadyOutput {}
+
+message GoneInput {
+  repeated ResourceIdentifier resources = 1;
+}
+
+message GoneOutput {}
+
+message ExecPodInput {
+  // The pod, by namespace and name; api_version and kind may be empty.
+  ResourceIdentifier pod = 1;
+  string container = 2;
+  repeated string command = 3;
+  bytes stdin = 4;
+  // Cap on stdout and on stderr, each; beyond it the output is cut and
+  // truncated is set. Zero means 512 KiB, under Temporal's payload limit.
+  int64 max_output_bytes = 5;
+  // Deadline for the command; zero means the activity's own timeout.
+  google.protobuf.Duration timeout = 6;
+}
+
+message ExecPodOutput {
+  bytes stdout = 1;
+  bytes stderr = 2;
+  int32 exit_code = 3;
+  bool truncated = 4;
+}

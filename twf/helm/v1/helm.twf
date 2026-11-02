@@ -1,0 +1,6 @@
+# Renders a chart from the hosting worker's chart filesystem into resources
+# for kube. The worker that holds the chart needs no cluster credentials.
+package helm
+
+activity RenderChart(chart: Chart, release: ReleaseName, namespace: Namespace, values: Values) -> (Resources):
+    return helm.render(chart, release, namespace, values)

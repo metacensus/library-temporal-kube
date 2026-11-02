@@ -1,0 +1,27 @@
+# Kubernetes over pre-rendered manifests, with the credentials of the worker
+# that hosts these. Writes return identifiers; waits take them.
+package kube
+
+activity Create(resources: Resources) -> (Identifiers):
+    return k8s.create(resources)
+
+activity Apply(resources: Resources) -> (Identifiers):
+    return k8s.apply(resources)
+
+activity Delete(resources: Identifiers):
+    k8s.delete(resources)
+
+activity Status(resources: Identifiers) -> (Statuses):
+    return k8s.status(resources)
+
+# Fails while any resource is not ready; the caller's retry policy is the wait.
+activity Ready(resources: Identifiers):
+    k8s.ready(resources)
+
+# Fails while any resource still exists; the caller's retry policy is the wait.
+activity Gone(resources: Identifiers):
+    k8s.gone(resources)
+
+# Runs once. A non-zero exit is a result, not a failure.
+activity ExecPod(pod: Identifier, container: Container, command: Command, stdin: Stdin) -> (ExecOutput):
+    return k8s.exec(pod, container, command, stdin)
