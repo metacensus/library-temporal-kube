@@ -9,7 +9,7 @@ $(error could not read the Go version from go.mod; refusing to run unpinned)
 endif
 TOOL_PATH := PATH="$(CURDIR)/.bin:$$PATH"
 
-GOLANGCI_LINT_VERSION := v2.5.0
+GOLANGCI_LINT_VERSION := v2.14.0
 TWF_VERSION := 0.16.0
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
 
