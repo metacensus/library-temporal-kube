@@ -13,5 +13,6 @@ consumer provides a `*rest.Config` and an `fs.FS` to fx, includes
 the worker it chooses. Payloads are workflow history: the library never puts secret
 material in one and refuses to carry a `kind: Secret` unless told to.
 
-`make check` is the gate. Authoring follows the Temporal skill in
+`make check` is the gate; its integration tests start k3s in Docker.
+Authoring follows the Temporal skill in
 [metacensus/skills](https://github.com/metacensus/skills).

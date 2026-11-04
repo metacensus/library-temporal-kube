@@ -58,9 +58,9 @@ test:
 test-race:
 	@GOTOOLCHAIN=$(GEN_TOOLCHAIN) go test -race -count=1 ./...
 
-## test-integration — tests that start a cluster in a container
+## test-integration — unit tests and those that start a cluster in a container, under the race detector (needs Docker)
 test-integration:
-	@GOTOOLCHAIN=$(GEN_TOOLCHAIN) go test -tags=integration -count=1 ./...
+	@GOTOOLCHAIN=$(GEN_TOOLCHAIN) go test -race -tags=integration -count=1 ./...
 
 ## lint — proto lint, fmt check, vet, golangci-lint
 lint: lint-proto-check install-tools-lint vet
@@ -77,7 +77,7 @@ tidy-check:
 	@cd tools && GOTOOLCHAIN=$(GEN_TOOLCHAIN) go mod tidy
 	@git diff --exit-code -- go.mod go.sum tools/go.mod tools/go.sum || (echo 'go.mod dirty; run go mod tidy' && exit 1)
 
-## check — everything CI gates: lint, generated code fresh, twf, tidy, tests
+## check — everything CI gates: lint, generated code fresh, twf, tidy, unit and integration tests
 check: lint
 	@$(TOOL_PATH) buf generate
 	@git diff --exit-code -- gen proto || (echo 'proto gen dirty; run make proto' && exit 1)
@@ -85,7 +85,7 @@ check: lint
 	@git diff --exit-code -- mocks || (echo 'mocks dirty; run make mocks' && exit 1)
 	@npx -y @temporal-architect/twf@$(TWF_VERSION) check twf
 	@$(MAKE) tidy-check
-	@GOTOOLCHAIN=$(GEN_TOOLCHAIN) go test -race -count=1 ./...
+	@$(MAKE) test-integration
 
 ## release — tag and push VERSION=x.y.z or the next TYPE=major|minor|patch; prompts unless YES=1
 release:
