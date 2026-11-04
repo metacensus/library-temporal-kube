@@ -242,8 +242,10 @@ func (c *client) Exec(ctx context.Context, req ExecRequest) (*ExecResult, error)
 
 // cappedWriter keeps the first max bytes and drops the rest, so a chatty
 // command cannot grow an activity result past Temporal's payload limit.
+// The buffer is a field, not embedded: an embedded bytes.Buffer would lend
+// its ReadFrom, and io.Copy would fill it past the cap without calling Write.
 type cappedWriter struct {
-	bytes.Buffer
+	buf       bytes.Buffer
 	max       int64
 	truncated bool
 }
@@ -251,13 +253,15 @@ type cappedWriter struct {
 func newCappedWriter(max int64) *cappedWriter { return &cappedWriter{max: max} }
 
 func (w *cappedWriter) Write(p []byte) (int, error) {
-	room := w.max - int64(w.Len())
+	room := w.max - int64(w.buf.Len())
 	if int64(len(p)) > room {
 		w.truncated = true
 		if room > 0 {
-			w.Buffer.Write(p[:room])
+			w.buf.Write(p[:room])
 		}
 		return len(p), nil
 	}
-	return w.Buffer.Write(p)
+	return w.buf.Write(p)
 }
+
+func (w *cappedWriter) Bytes() []byte { return w.buf.Bytes() }

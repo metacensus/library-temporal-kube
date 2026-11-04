@@ -3,8 +3,10 @@ package kube
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -142,10 +144,23 @@ func TestCappedWriter_Write(t *testing.T) {
 					t.Fatalf("write reported %d, %v", n, err)
 				}
 			}
-			if w.String() != tt.want || w.truncated != tt.wantTruncated {
-				t.Fatalf("want %q truncated=%v, got %q truncated=%v", tt.want, tt.wantTruncated, w.String(), w.truncated)
+			if string(w.Bytes()) != tt.want || w.truncated != tt.wantTruncated {
+				t.Fatalf("want %q truncated=%v, got %q truncated=%v", tt.want, tt.wantTruncated, w.Bytes(), w.truncated)
 			}
 		})
+	}
+}
+
+// The exec stream copies into the writer with io.Copy; from a source with no
+// WriteTo, io.Copy takes the writer's ReadFrom when it has one.
+func TestCappedWriter_Copy(t *testing.T) {
+	w := newCappedWriter(4)
+	src := struct{ io.Reader }{strings.NewReader("0123456789")}
+	if _, err := io.Copy(w, src); err != nil {
+		t.Fatalf("copy: %v", err)
+	}
+	if string(w.Bytes()) != "0123" || !w.truncated {
+		t.Fatalf("want %q truncated=true, got %q truncated=%v", "0123", w.Bytes(), w.truncated)
 	}
 }
 
