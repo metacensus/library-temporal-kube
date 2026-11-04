@@ -20,12 +20,6 @@ jobs:
         with:
           path: .bin
           key: tools-${{ runner.os }}-${{ hashFiles('tools/go.sum', 'tools/go.mod', 'Makefile') }}
-      - name: Install twf
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/jmbarzee/temporal-architect-dist/main/packages/install.sh | bash
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-        env:
-          VERSION: v0.15.0
       - run: make check
       - name: No untracked files
         run: git status --porcelain | tee /dev/stderr | test -z "$(cat)"
