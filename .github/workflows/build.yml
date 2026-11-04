@@ -20,6 +20,8 @@ jobs:
         with:
           path: .bin
           key: tools-${{ runner.os }}-${{ hashFiles('tools/go.sum', 'tools/go.mod', 'Makefile') }}
+      # Must match startK3s's image. Its own step, so a registry failure isn't read as a test failure.
+      - run: docker pull rancher/k3s:v1.31.4-k3s1
       - run: make check
       - name: No untracked files
         run: git status --porcelain | tee /dev/stderr | test -z "$(cat)"
