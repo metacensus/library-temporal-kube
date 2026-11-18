@@ -1,4 +1,4 @@
-.PHONY: help install-tools-gen install-tools-lint proto mocks gen lint-proto-check fmt vet test test-race test-integration lint vuln tidy-check check release latest
+.PHONY: help install-tools-gen install-tools-lint proto mocks gen lint-proto-check breaking fmt vet test test-race test-integration lint vuln tidy-check check release latest
 
 .DEFAULT_GOAL := help
 
@@ -41,6 +41,10 @@ gen: proto mocks
 lint-proto-check: install-tools-gen
 	@$(TOOL_PATH) buf lint
 	@$(TOOL_PATH) buf format -d --exit-code
+
+## breaking — buf breaking against origin/main
+breaking: install-tools-gen
+	@$(TOOL_PATH) buf breaking --against '.git#ref=origin/main'
 
 ## fmt — rewrite with gofmt (skip gen/)
 fmt:
